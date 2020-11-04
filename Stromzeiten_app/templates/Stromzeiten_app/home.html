@@ -1,0 +1,15 @@
+{% extends "Stromzeiten_app/base.html" %}
+{% block content %}
+    {% for row in data %}
+        <article class="media content-section">
+            <div class="media-body">
+                <div class="article-metadata">
+          <a class="mr-2" href="#">Total Power Generation {{ row.Total }} MW</a>
+          <small class="text-muted">{{ row.Date|date:"G:i F d, Y" }}</small>
+        </div>
+        <h2><a class="article-title" href="#">Renewable percentage: {{ row.Renewables_procentaqe }} %</a></h2>
+        <p class="article-content"> Total Renewable generation: {{ row.Total_Renewables }} MW </p>
+      </div>
+    </article>
+    {% endfor %}
+{% endblock content %}
