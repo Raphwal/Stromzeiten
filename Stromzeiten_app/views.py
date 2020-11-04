@@ -13,5 +13,3 @@ def home(request):
 def about(request):
     return render(request, 'Stromzeiten_app/about.html', {'title': 'About'})
 # Create your views here.
-
-#hello
