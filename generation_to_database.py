@@ -5,12 +5,12 @@ from datetime import date, timedelta
 import time
 
 
-tomorrow = date.today()+timedelta(days=1)
-current_date = tomorrow.strftime("%Y%m%d")
+end_date = date.today()+timedelta(days=1)
+current_date = end_date.strftime("%Y%m%d")
 
 client = EntsoePandasClient(api_key='444fc771-5d0f-499f-9328-90c05c459219')
 
-start = pd.Timestamp('20201026', tz='Europe/Brussels')
+start = pd.Timestamp('20201109', tz='Europe/Brussels')
 end = pd.Timestamp(current_date, tz='Europe/Brussels')
 country_code = 'DE'
 
@@ -32,7 +32,16 @@ rounded_renewables = generation['Renewables_procentaqe'].round(decimals=1)
 generation['Renewables_procentaqe'] =  rounded_renewables
 
 print(generation)
-generation.drop(generation.tail(3).index, inplace=True)
+
+is_NaN = generation.isnull()
+row_has_NaN = is_NaN.any(axis=1)
+rows_with_NaN = generation[row_has_NaN]
+print(rows_with_NaN)
+
+generation.drop(generation[row_has_NaN].index, inplace=True)
+
+print(generation)
+
 generation.rename(columns={"Fossil Brown coal/Lignite": "Fossil_Brown_coal_Lignite",
                             "Fossil Gas": "Fossil_Gas", "Fossil Hard coal": "Fossil_Hard_coal", "Fossil Oil": "Fossil_Oil", "Hydro Pumped Storage": "Hydro_Pumped_Storage",
                             "Hydro Run-of-river and poundage": "Hydro_Run_of_river_and_poundage", "Hydro Water Reservoir": "Hydro_Water_Reservoir", "Other renewable": "Other_renewable",
@@ -48,9 +57,9 @@ SELECT * FROM Stromzeiten_app_generation
           ''')
 
 for row in c.fetchall():
-    print (row)
+    print(row)
 
-time.sleep(900)
+#time.sleep(900)
 
 
 while True:
@@ -72,7 +81,13 @@ while True:
     latest_generation['Total'] = latest_generation['Total_Renewables'] + latest_generation['Total_Non_Renewables']
     latest_generation['Renewables_procentaqe'] = (latest_generation['Total_Renewables'] / latest_generation['Total']) * 100
     print(latest_generation)
-    latest_generation.drop(latest_generation.tail(3).index, inplace=True)
+
+    is_NaN = latest_generation.isnull()
+    row_has_NaN = is_NaN.any(axis=1)
+    rows_with_NaN = latest_generation[row_has_NaN]
+    print(rows_with_NaN)
+
+    latest_generation.drop(latest_generation[row_has_NaN].index, inplace=True)
     latest_generation.rename(columns={"Fossil Brown coal/Lignite": "Fossil_Brown_coal_Lignite",
                                 "Fossil Gas": "Fossil_Gas", "Fossil Hard coal": "Fossil_Hard_coal",
                                 "Fossil Oil": "Fossil_Oil", "Hydro Pumped Storage": "Hydro_Pumped_Storage",
@@ -84,8 +99,32 @@ while True:
     rounded_current_renewables = current_generation['Renewables_procentaqe'].round(decimals=1)
     current_generation['Renewables_procentaqe'] = rounded_current_renewables
     current_generation.round(1)
-    current_generation.to_sql('Stromzeiten_app_generation', conn, if_exists='append', index=False)
 
+    SQL_Query = pd.read_sql_query('''  
+        SELECT * FROM Stromzeiten_app_generation ORDER BY id DESC LIMIT 1
+                  ''', conn)
+    print(SQL_Query)
+    df = pd.DataFrame(SQL_Query)
+
+    df = df.reset_index(drop=True)
+    current_generation = current_generation.reset_index(drop=True)
     print(current_generation)
+    print(df)
+    x = current_generation['id'].values[0]
+    y = df['id'].values[0]
+    print(x, y)
+    if x == y:
+        print("no new values")
+    else:
+        current_generation.to_sql('Stromzeiten_app_generation', conn, if_exists='append', index=False)
 
-    time.sleep(900)
+
+
+    c.execute('''  
+    SELECT * FROM Stromzeiten_app_generation
+              ''')
+
+    for row in c.fetchall():
+        print(row)
+
+    time.sleep(60)
